@@ -1,97 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>ChatGPT Web Chat</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My AI Chatbot</title>
   <style>
-    body { background:#0f1724; color:#e6eef6; font-family:Arial; }
-    .chatbox { max-width:700px; margin:40px auto; background:#1c2233; padding:20px; border-radius:10px; }
-    #chat { height:300px; overflow:auto; padding:10px; border:1px solid #333; border-radius:8px; background:#111827; }
-    .msg { margin:8px 0; }
-    .user { text-align:right; color:#7c3aed; }
-    .bot { text-align:left; color:#9ca3af; }
-    form { display:flex; margin-top:10px; }
-    input { flex:1; padding:10px; border-radius:6px; border:none; margin-right:6px; }
-    button { padding:10px 14px; border:none; border-radius:6px; background:#7c3aed; color:#fff; cursor:pointer; }
-    .vars { font-size:14px; color:#9ca3af; margin-top:15px; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #343541;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 1rem;
+      background: #202123;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #555;
+    }
+
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .msg {
+      max-width: 70%;
+      padding: 0.8rem 1rem;
+      border-radius: 1rem;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    .user {
+      background: #10a37f;
+      align-self: flex-end;
+      border-bottom-right-radius: 0.3rem;
+    }
+
+    .bot {
+      background: #444654;
+      align-self: flex-start;
+      border-bottom-left-radius: 0.3rem;
+    }
+
+    form {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: #202123;
+      border-top: 1px solid #555;
+    }
+
+    input {
+      flex: 1;
+      padding: 0.8rem;
+      border-radius: 0.5rem;
+      border: none;
+      background: #40414f;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    button {
+      background: #10a37f;
+      border: none;
+      padding: 0 1.5rem;
+      border-radius: 0.5rem;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1a7f64;
+    }
   </style>
 </head>
 <body>
-  <div class="chatbox">
-    <h1>ChatGPT Chatbot</h1>
-    <div id="chat"></div>
-    <form id="form">
-      <input id="input" type="text" placeholder="Say something..." autocomplete="off" required />
-      <button>Send</button>
-    </form>
+  <header>💬 My AI Chatbot</header>
 
-    <!-- ChatGPT Variables -->
-    <div class="vars">
-      <label>Model:
-        <select id="model">
-          <option value="gpt-4o-mini">gpt-4o-mini</option>
-          <option value="gpt-4o">gpt-4o</option>
-          <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-        </select>
-      </label>
-      <label>Temperature:
-        <input id="temp" type="number" min="0" max="2" step="0.1" value="0.7">
-      </label>
-      <label>Max Tokens:
-        <input id="tokens" type="number" min="1" max="1000" value="300">
-      </label>
-    </div>
-  </div>
+  <div id="chat"></div>
 
-<script>
-const chat = document.getElementById('chat');
-const form = document.getElementById('form');
-const input = document.getElementById('input');
-const modelSel = document.getElementById('model');
-const tempSel = document.getElementById('temp');
-const tokSel = document.getElementById('tokens');
+  <form id="form">
+    <input id="input" type="text" placeholder="Send a message..." required />
+    <button type="submit">Send</button>
+  </form>
 
-let conversation = [
-  { role: "system", content: "You are a helpful assistant." }
-];
+  <script>
+    const chatEl = document.getElementById("chat");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
 
-function addMsg(text, cls){
-  const div = document.createElement('div');
-  div.className = 'msg ' + cls;
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
+    function addMsg(text, sender) {
+      const msg = document.createElement("div");
+      msg.className = `msg ${sender}`;
+      msg.textContent = text;
+      chatEl.appendChild(msg);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
 
-form.addEventListener('submit', async e=>{
-  e.preventDefault();
-  const text = input.value.trim();
-  if(!text) return;
-  addMsg("You: "+text,'user');
-  input.value = '';
+    async function askGPT(message) {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer YOUR_API_KEY_HERE"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: message }]
+        })
+      });
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || "(No response)";
+    }
 
-  conversation.push({role:'user', content:text});
-  addMsg("Bot: …thinking…",'bot');
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userMsg = input.value.trim();
+      if (!userMsg) return;
 
-  try{
-    const res = await fetch('/.netlify/functions/chat',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        messages: conversation,
-        model: modelSel.value,
-        temperature: parseFloat(tempSel.value),
-        max_tokens: parseInt(tokSel.value)
-      })
+      addMsg(userMsg, "user");
+      input.value = "";
+      addMsg("Thinking...", "bot");
+
+      try {
+        const reply = await askGPT(userMsg);
+        chatEl.lastChild.textContent = reply;
+      } catch (err) {
+        chatEl.lastChild.textContent = "(Error: " + err.message + ")";
+      }
     });
-    const data = await res.json();
-    const reply = data.reply || "(No reply)";
-    chat.lastChild.textContent = "Bot: " + reply;
-    conversation.push({role:'assistant', content:reply});
-  }catch(err){
-    chat.lastChild.textContent = "Bot: (Error: "+err.message+")";
-  }
-});
-</script>
+  </script>
 </body>
 </html>
